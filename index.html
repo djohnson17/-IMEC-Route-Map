@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMEC Route Map - Home</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Inter", sans-serif;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .hero {
+            height: 100vh;
+            width: 100vw;
+            background: url('./assets/imec-route-map-hero.png') no-repeat;
+            filter: blur(0px);
+            position: relative;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+        }
+
+        .content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            font-weight: 300;
+            opacity: 0.9;
+            margin-bottom: 2.4rem;
+        }
+
+        .enter-button {
+            display: inline-block;
+            padding: 16px 32px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #1b2f23;
+            background: #e4f2e9;
+            border-radius: 10px;
+            text-decoration: none;
+            transition: 0.2s ease;
+        }
+
+        .enter-button:hover {
+            background: #d3eadc;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 1.7rem;
+            }
+            .subtitle {
+                font-size: 0.95rem;
+            }
+            .enter-button {
+                padding: 14px 28px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div class="hero">
+        <div class="overlay"></div>
+        <div class="content">
+            <div class="title">
+                Middle East Geopolitical Mapping Project:<br>
+                IMEC: India-Middle East-Europe Trade Corridor
+            </div>
+
+            <div class="subtitle">
+                Explore three models visualizing trade, transport, and geopolitical infrastructure.
+            </div>
+
+            <a href="model1.html" class="enter-button">Enter the 1st Map Model</a>
+
+        </div>              
+    </div>
+</body>
+</html>

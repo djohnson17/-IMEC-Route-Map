@@ -12,16 +12,66 @@
     <!-- Polyline decorator for arrow animation -->
     <script src="https://unpkg.com/leaflet-polylinedecorator@1.7.0/dist/leaflet.polylineDecorator.min.js"></script>
 
+    <!-- MovingMarker plugin (required for animated markers) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-moving-marker/0.2.0/MovingMarker.min.js"></script>
+
     <!-- PapaParse decorator for arrow animation (used for arrows if wanted) -->
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="styles.css" />
 
     <style>
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Poppins", "Inter", sans-serif;
+            background-color: #f5f5f5;
+            color: #243b2f;
+        }
+
         #map {
+            position: fixed;
+            top: 64px; /* leave space for navbar */
+            bottom: 0;
+            left: 0;
+            right: 0;
             height: 100vh;
             width: 100vw;
         }
+
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, rgba(36,59,47,0.95), rgba(36,59,47,0.9));
+            color: #fff;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            pointer-events: auto;
+        }
+        .navbar.visible { opacity: 1; transform: translateY(0); }
+
+        /* left section */
+        .navbar .left { display: flex; align-items: center; gap: 12px; }
+        .brand { color: #f1f1f1; font-weight: 600; letter-spacing:0.4px; }
+
+        .nav-links { list-style: none; margin: 0; padding: 0; display:flex; gap: 14px; align-items:center; }
+        .nav-links li { display: inline-block; }
+        .nav-links a { text-decoration:none; color:#e6f0e9; font-weight:600; padding:8px 10px; border-radius:6px; }
+        .nav-links a.active {background: rgba(255,255,255,0.06); border-bottom: 3px solid #c9a66b; }
+
         .control-panel { 
             position: absolute; 
             left: 28px; 
@@ -39,6 +89,37 @@
             margin-bottom: 6px;
         }
         .small-note { font-size: 12px; color: #666; margin-top: 6px; } 
+
+        /* ---------- Tooltip label classes (for bindTooltip) ---------- */
+        .imec-label {
+        font-weight:700;
+        font-size:13px;
+        color:#1b362b;
+        background: rgba(255,255,255,0.95);
+        padding:4px 8px;
+        border-radius:6px;
+        border:1px solid rgba(0,0,0,0.06);
+        }
+        .non-imec-label {
+        font-weight:500;
+        font-size:11px;
+        color:#3b3b3b;
+        background: rgba(255,255,255,0.9);
+        padding:2px 6px;
+        border-radius:4px;
+        }
+        .water-label {
+        font-weight:600;
+        font-size:13px;
+        color:#007b9a;
+        background: rgba(255,255,255,0.9);
+        padding:4px 8px;
+        border-radius:6px;
+        border:1px solid rgba(0,0,0,0.04);
+        }
+
+        .leaflet-tooltip.mytooltip { pointer-events: none; }
+
     </style>
 </head>
 <body>
@@ -50,7 +131,7 @@
             <span class="brand">Grungras Consultancy</span>
         </div>
 
-        <ul class="navbar-content">
+        <ul class="nav-links">
             <li><a href="index.html" class="navbar-logo">IMEC</a></li>
             <li><a href="model1.html" class="navbar-link">Model 1</a></li>
             <li><a href="model2.html" class="navbar-link">Model 2</a></li>
@@ -68,6 +149,30 @@
     <div id="map"></div>
 
     <script>
+
+        // --- nav bar ---
+        (function() {
+
+            const navbar = document.getElementById('site-navbar');
+
+            function setVisibility(visible) {
+                if (visible) {
+                    navbar.classList.add('visible');
+                }
+            }
+
+            setVisibility(false);
+
+            document.addEventListener('mousemove', e => {
+            const nearTop = e.clientY < 100 || navbar.matches(':hover');
+            setVisibility(nearTop);
+        });
+
+        window.addEventListener('focusin', () => setVisibility(true));
+        window.addEventListener('focusout', () => setVisibility(false));
+        
+        })();
+
         // --- map init ----
         const map = L.map('map', { zoomControl: true}).setView([30, 45], 4);
 
@@ -78,7 +183,7 @@
 
         // --- styles + colors --- 
         const IMEC_GREEN = '#00cc66';
-        const WATER_AQUA = '#8ae4ff';
+        const WATER_AQUA = 'rgba(138, 228, 255, 0.22)';
         const NON_IMECCOUNTRY_COLOR = '#d6c7a1';
 
         const countryColors = {
@@ -87,8 +192,30 @@
             'Jordan': '#8e24aa',
             'Saudi Arabia': '#43a047',
             'United Arab Emirates': '#f06292',
-            'India': '1976d2',
+            'India': '#1976d2',
         };
+
+        const medCoords = [
+            [35.9,-6.4],[36.3,-1.2],[36.9, 9.6],[36.5, 15.0],[35.4, 20.0],
+            [34.0, 25.0],[33.0, 30.0],[33.3, 35.0],[33.9,36.6],[34.7, 31.0],[34.4,24.0],
+            [33.3, 19.0],[33.0,14.0],[34.6,8.0],[36.0,2.5]
+        ];
+
+        const persionGulfCoords = [
+            [30.1,46.5],[28.8,47.0],[26.8,49.0],[24.0,53.0],[24.8,56.0],[27.4,55.5],
+            [29.6,52.5],[31.2,50.8],[31.5,49.9],[31.3,49.0]
+        ];
+
+        const arabianSeaCoords = [
+            [12.0,57.0],[14.0,60.0],[16.0,63.0],[18.0,66.0],[20.0,70.0],
+            [18.5,73.0],[16.5,75.5],[14.0,76.5],[11.5,75.0],[9.0,72.0],
+            [7.5,69.0],[6.5,64.0],[7.5,60.0],[9.5,58.0]
+        ];
+
+        const seaOptions = { color: WATER_AQUA, fillColor: WATER_AQUA, fillOpacity: 0.22, weight: 0, interactive: false };
+        const medPoly = L.polygon(medCoords, seaOptions).addTo(map);
+        const gulfPoly = L.polygon(persionGulfCoords, seaOptions).addTo(map);
+        const arabianPoly = L.polygon(arabianSeaCoords, seaOptions).addTo(map);
 
         // --- add world geojson and style countries ---
         fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
@@ -104,51 +231,32 @@
                     },
                     onEachFeature: (feature, layer) => {
                         const name = feature.properties.name;
-                        let tooltipOptions = { permanent: false, direction: 'center', className: 'country-label' };
-                        if (countryColors[name]) {
-                            layer.bindToolTip(name, { permanent: false, direction: 'center', className: 'imec-label' });
-                        } else {
-                            layer.bindToolTip(name, { permanent: false, direction: 'center', className: 'non-imec-label' });
-                        }
-                    }
+                        const cls = countryColors[name] ? 'imec-label' : 'non-imec-label';
+                        layer.bindTooltip(name, {permanent: false, direction: 'center', className: cls });
+                    },
+
+                    interactive: true
                 }).addTo(map);
             })
             .catch(err => console.error('Error loading geojson:', err));
         
 
-        // add water bodies
-        const mediterraneanSea = L.polygon([
-            [36.0, -6.0],
-            [30.0, 36.5]
-        ], {
-            color: WATER_AQUA,
-            fillOpacity: 0.06,
-            weight: 0
-        }).addTo(map);
+        function densifyPath(path, segmentsPerLeg=40){
+            const out = [];
+            for(let i=0;i<path.length-1;i++){
+            const a = path[i], b = path[i+1];
+            for(let s=0;s<segmentsPerLeg;s++){
+                const t = s/segmentsPerLeg;
+                const lat = a[0] + (b[0]-a[0]) * t;
+                const lng = a[1] + (b[1]-a[1]) * t;
+                out.push([lat, lng]);
+            }
+            }
+            out.push(path[path.length-1]);
+            return out;
+        }
 
-        const persionGulf = L.polygon([
-            [24.0, 48.0],
-            [28.5, 56.0]
-        ], {
-            color: WATER_AQUA,
-            fillOpacity: 0.06,
-            weight: 0
-        }).addTo(map);
 
-        const arabianSea = L.polygon([
-            [6.0, 57.0],
-            [22.0, 77.0]
-        ], {
-            color: WATER_AQUA,
-            fillOpacity: 0.06,
-            weight: 0
-        }).addTo(map);
-
-        //Add water labels
-        L.marker([33.0, 15.0], {interactive: false, opacity: 0.0}).addTo(map).bindTooltip('Eastern Mediterranean', {permanent: true, direction: 'center', className: 'water-label' });
-        L.marker([26.0, 53.0], {interactive: false, opacity: 0.0}).addTo(map).bindTooltip('Persian Gulf', {permanent: true, direction: 'center', className: 'water-label' });
-        L.marker([16.0, 70.0], {interactive: false, opacity: 0.0}).addTo(map).bindTooltip('Arabian Sea', {permanent: true, direction: 'center', className: 'water-label' });
-        
         // ---------- IMEC route waypoints (approximate) ----------
         const routePoints = {
             greece_piraeus: [37.94, 23.64],
@@ -182,35 +290,23 @@
             routePoints.uae_jabelAli
         ];
 
+        const sea1Smooth = densifyPath(seaSegment1, 80);
+        const landSmooth = densifyPath(landSegment, 60);
+        const sea2Smooth = densifyPath(seaSegment2, 80);
+
+        const imecSea1 = L.polyline(sea1Smooth, {color: IMEC_GREEN, weight: 6, opacity: 0.95, lineJoin:'round' }).addTo(map);
+        const imecLand = L.polyline(landSmooth, {color: '#007a3d', weight: 6, opacity: 0.95, lineJoin:'round' }).addTo(map);
+        const imecSea2 = L.polyline(sea2Smooth, {color: IMEC_GREEN, weight: 6, opacity: 0.95, lineJoin:'round' }).addTo(map);
+
         //Full IMEC (land + sea)
         const imecFullRoute = L.polyline(
-            seaSegment1.concat(landSegment.slice(1), seaSegment2.slice(1)),
+            sea1Smooth.concat(landSmooth.slice(1), sea2Smooth.slice(1)),
             { 
                 color: IMEC_GREEN, 
                 weight: 6, 
-                opacity: 0.95,
-                lineJoin: 'round'
+                opacity: 1.0,
             }
         ).addTo(map);
-
-        const imecLand = L.polyline(landSegment, { 
-            color: '#007a3d',
-            weight: 7,
-            opacity: 0.95,
-       }).addTo(map);
-
-        const imecSea1 = L.polyline(seaSegment1, { 
-            color: IMEC_GREEN,
-            weight: 7,
-            opacity: 0.95,
-       }).addTo(map);
-
-        const imecSea2 = L.polyline(seaSegment2, { 
-            color: IMEC_GREEN,
-            weight: 7,
-            opacity: 0.95,
-        }).addTo(map);
-
 
         // ICONS
         const trainIcon = L.icon({
@@ -271,8 +367,8 @@
         // --- Animation of ships and trains along the route ---
         let speedFactor = 1; // Default speed factor
 
-        document.getElementById('speedSlider').addEventListener('input', function() {
-            speedFactor = parseFloat(this.value);
+        document.getElementById('speedSlider').addEventListener('input', e => {
+            speedFactor = parseFloat(e.target.value);
         });
 
         // Function to create moving markers (ships/trains)
@@ -283,17 +379,17 @@
                 iconAnchor: [16, 16],
             });
 
-            const marker = L.Marker.movingMarker(route, duration, {icon: icon}).addTo(map);
+            const marker = L.Marker.movingMarker(route, duration / speedFactor, {icon: icon}).addTo(map);
             marker.start();
             return marker;
         }
 
         // Create ship markers on sea segments
-        const ship1 = createMovingMarker(seaSegment1, 'ship_icon.png', 20000 / speedFactor);
-        const ship2 = createMovingMarker(seaSegment2, 'ship_icon.png', 20000 / speedFactor);
+        const ship1 = createMovingMarker(seaSegment1, 'ship_icon.png', 20000);
+        const ship2 = createMovingMarker(seaSegment2, 'ship_icon.png', 20000);
 
         // Create train marker on land segment
-        const train = createMovingMarker(landSegment, 'train_icon.png', 30000 / speedFactor);
+        const train = createMovingMarker(landSegment, 'train_icon.png', 30000);
 
     </script>
 
