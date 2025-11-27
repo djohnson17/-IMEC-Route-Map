@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/leaflet-polylinedecorator@1.7.0/dist/leaflet.polylineDecorator.min.js"></script>
 
     <!-- MovingMarker plugin (required for animated markers) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-moving-marker/0.2.0/MovingMarker.min.js"></script>
+    <script src="https://rawcdn.githack.com/ewoken/Leaflet.MovingMarker/master/MovingMarker.js"></script>
 
     <!-- PapaParse decorator for arrow animation (used for arrows if wanted) -->
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
@@ -33,7 +33,7 @@
 
         #map {
             position: fixed;
-            top: 64px; /* leave space for navbar */
+            top: 0; 
             bottom: 0;
             left: 0;
             right: 0;
@@ -125,9 +125,9 @@
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar">
+    <nav id ="site-navbar" class="navbar">
         <div class="left">
-            <img id="logo" src="~/image.png" alt="Grungras logo" style="height: 36px;">
+            <img id="logo" src="img/GC Logo 2024 White Horiz.png" alt="Grungras logo" style="height: 36px;">
             <span class="brand">Grungras Consultancy</span>
         </div>
 
@@ -143,7 +143,7 @@
     <div class="control-panel" id="control-panel">
         <label for="speedSlider">Animation Speed (ships & trains)</label>
         <input id="speedSlider" type="range" min="0.2" max="2.5" step="0.05" value="1">
-        <div class="small-note">Lower = faster animation, Higer = slower animation</div>
+        <div class="small-note">Lower = faster animation, Higher = slower animation</div>
     </div>
 
     <div id="map"></div>
@@ -158,13 +158,15 @@
             function setVisibility(visible) {
                 if (visible) {
                     navbar.classList.add('visible');
+                } else {
+                    navbar.classList.remove('visible');
                 }
             }
 
-            setVisibility(false);
+            //setVisibility(false);
 
             document.addEventListener('mousemove', e => {
-            const nearTop = e.clientY < 100 || navbar.matches(':hover');
+            const nearTop = e.clientY < 80 || navbar.matches(':hover');
             setVisibility(nearTop);
         });
 
@@ -271,6 +273,40 @@
             india_mumbai: [18.96, 72.83],
         };
 
+        const wayPointNames = {
+            greece_piraeus: 'Piraeus, Greece',
+            israel_haifa: 'Haifa, Israel',
+            sa_alHadithah: 'Al Hadithah, Saudi Arabia',
+            sa_riyadh: 'Riyadh, Saudi Arabia',
+            sa_haradh: 'Haradh, Saudi Arabia',
+            uae_alGhuwaifat: 'Al Ghuwaifat, UAE',
+            uae_jabelAli: 'Jabel Ali, UAE',
+            india_mumbai: 'Mumbai, India',
+        }
+
+        // Add waypoint markers
+        map.createPane('waypointsPane');
+        map.getPane('waypointsPane').style.zIndex = 800;
+
+        const waypointIcon = L.divIcon({
+            className: 'waypoint-dot',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+        })
+
+        Object.entries(routePoints).forEach(([key, coord]) => {
+            L.marker(coord, {
+                icon: waypointIcon,
+                pane: 'waypointsPane',
+            }).addTo(map)
+            .bindTooltip(wayPointNames[key], { 
+                permanent: false,
+                direction: 'top',
+                className: 'waypoint-label',
+                offset: [0, -4]
+            });
+        });
+
         const seaSegment1 = [
             routePoints.greece_piraeus,
             routePoints.israel_haifa
@@ -290,13 +326,19 @@
             routePoints.uae_jabelAli
         ];
 
+
         const sea1Smooth = densifyPath(seaSegment1, 80);
         const landSmooth = densifyPath(landSegment, 60);
         const sea2Smooth = densifyPath(seaSegment2, 80);
 
-        const imecSea1 = L.polyline(sea1Smooth, {color: IMEC_GREEN, weight: 6, opacity: 0.95, lineJoin:'round' }).addTo(map);
-        const imecLand = L.polyline(landSmooth, {color: '#007a3d', weight: 6, opacity: 0.95, lineJoin:'round' }).addTo(map);
-        const imecSea2 = L.polyline(sea2Smooth, {color: IMEC_GREEN, weight: 6, opacity: 0.95, lineJoin:'round' }).addTo(map);
+        // ---------- Draw IMEC route ----------
+        map.createPane('imecRoutePane');
+        map.getPane('imecRoutePane').style.zIndex = 650;
+        map.getPane('imecRoutePane').style.pointerEvents = 'none';
+
+        const imecSea1 = L.polyline(sea1Smooth, {color: IMEC_GREEN, weight: 6, pane: 'imecRoutePane', opacity: 0.95, lineJoin:'round' }).addTo(map);
+        const imecLand = L.polyline(landSmooth, {color: '#007a3d', weight: 7, pane: 'imecRoutePane', opacity: 0.95, lineJoin:'round' }).addTo(map);
+        const imecSea2 = L.polyline(sea2Smooth, {color: IMEC_GREEN, weight: 6, pane: 'imecRoutePane', opacity: 0.95, lineJoin:'round' }).addTo(map);
 
         //Full IMEC (land + sea)
         const imecFullRoute = L.polyline(
@@ -304,92 +346,109 @@
             { 
                 color: IMEC_GREEN, 
                 weight: 6, 
-                opacity: 1.0,
+                opacity: 0.88,
             }
         ).addTo(map);
 
-        // ICONS
+        // ------ ICONS ------
+        map.createPane('iconsPane');
+        map.getPane('iconsPane').style.zIndex = 900;
+
         const trainIcon = L.icon({
-            iconUrl: 'train_icon.png',
+            iconUrl: 'img/railway-icon.png',
             iconSize: [34, 30],
-            iconAnchor: [17, 10],
+            iconAnchor: [17, 16],
         });
 
         const shipIcon = L.icon({
-            iconUrl: 'ship_icon.png',
+            iconUrl: 'img/ship-trawler-icon.png',
             iconSize: [32, 20],
             iconAnchor: [16, 10],
         });
 
-        // sample markers along paths
-        function sampleMarkers(latlngs, count) {
-            const samples = [];
-            const len = latlngs.length;
-            
-            for (let i = 0; i < count; i++){
-                const t = i / (count - 1);
-                const idx = t * (len - 1);
-                const low = Math.floor(idx),
-                    high = Math.min(len - 1, Math.ceil(idx));
-                const ratio = idx - low;
-                const a = latlngs[low], b = latlngs[high];
-                samples.push([
-                    a[0] + (b[0] - a[0]) * ratio,
-                    a[1] + (b[1] - a[1]) * ratio
-                ]);
-            }
-            return samples;
-        }
+        let trains = [];
+        let ships = [];
 
-        //spawn trains (land only)
-        sampleMarkers(landSegment, 5).forEach(pos => {
-            const m = L.marker(pos, { icon: trainIcon, interactive: false }).addTo(map);
-            trains.push({ marker: m, path: landSegment, idx: 0});
-        });
+        function createLoopingMarker(path, icon, baseDurationMs, delayMs=0) {
 
-        //spawn ships (sea only)
-        const ships = [];
+            const n = path.length;
+            if (n < 2) return null;
+            const segDurs = Math.max(200, Math.floor(baseDurationMs / (n-1)));
 
-        //Ships from Piraeus -> Haifa
-        sampleMarkers(seaSegment1, 3).forEach((pos, i) => {
-            const m = L.marker(pos, { icon: shipIcon, interactive: false }).addTo(map);
-            ships.push({ marker: m, path: seaSegment1, idx: i * 10});
-        });
+            const durations = Array(n-1).fill(segDurs);
 
-        //Ships from Jebel Ali -> Mumbai
-        sampleMarkers(seaSegment2, 3).forEach((pos, i) => {
-            const m = L.marker(pos, { icon: shipIcon, interactive: false }).addTo(map);
-            ships.push({ marker: m, path: seaSegment2, idx: i * 10}); // offset index for variety
-        });
+            const marker = L.Marker.movingMarker(path, durations, {icon: icon, pane: 'iconsPane',autostart: false});
 
-
-
-        // --- Animation of ships and trains along the route ---
-        let speedFactor = 1; // Default speed factor
-
-        document.getElementById('speedSlider').addEventListener('input', e => {
-            speedFactor = parseFloat(e.target.value);
-        });
-
-        // Function to create moving markers (ships/trains)
-        function createMovingMarker(route, iconUrl, duration) {
-            const icon = L.icon({
-                iconUrl: iconUrl,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16],
+            marker.on('end', () =>  {
+                marker.setLatLng(path[0]);
+                marker.start();
             });
 
-            const marker = L.Marker.movingMarker(route, duration / speedFactor, {icon: icon}).addTo(map);
-            marker.start();
+            setTimeout(() => {
+                marker.start();
+            }, delayMs);
+
+            marker.addTo(map);
             return marker;
         }
 
-        // Create ship markers on sea segments
-        const ship1 = createMovingMarker(seaSegment1, 'ship_icon.png', 20000);
-        const ship2 = createMovingMarker(seaSegment2, 'ship_icon.png', 20000);
+        function initAllMarkers() {
+            ships.forEach(marker => { marker.stop(); map.removeLayer(marker); });
+            trains.forEach(marker => { marker.stop(); map.removeLayer(marker); });
 
-        // Create train marker on land segment
-        const train = createMovingMarker(landSegment, 'train_icon.png', 30000);
+            ships = [];
+            trains = [];
+
+            const sea1Dur = 20000 / speedFactor;
+            const landDur = 30000 / speedFactor;
+            const sea2Dur = 22000 / speedFactor;
+
+            // Create ship markers on sea segments
+            const ship1 = createLoopingMarker(sea1Smooth, shipIcon, sea1Dur, 0);
+            const train = createLoopingMarker(landSmooth, trainIcon, landDur, 0);
+            const ship2 = createLoopingMarker(sea2Smooth, shipIcon, sea2Dur, 4000);
+
+            if (ship1) ships.push(ship1);
+            if (train) trains.push(train);
+            if (ship2) ships.push(ship2);
+
+        }
+
+        let speedFactor = 1; // Default speed factor
+        initAllMarkers();
+
+        // --- Speed Slider control ---
+        const speedSlider = document.getElementById('speedSlider');
+
+        speedSlider.addEventListener('input', e => {
+            const raw = parseFloat(e.target.value);
+
+            speedFactor = Math.pow(2.5 - raw + 0.1, 2);
+
+            if (window._speedChangeTimer) clearTimeout(window._speedChangeTimer);
+            
+            window._speedChangeTimer = setTimeout(() => {
+                initAllMarkers();
+            }, 150);
+        });
+
+        
+        // --- Water Labels ---
+        L.marker([33.0, 15.0], {interactive: false, opacity: 0}).addTo(map)
+        .bindTooltip('Eastern Mediterranean', { permanent:true, direction:'center', className:'water-label' });
+
+        L.marker([26.0, 53.0], {interactive: false, opacity: 0}).addTo(map)
+        .bindTooltip('Persian Gulf', { permanent:true, direction:'center', className:'water-label' });
+
+        L.marker([16.0, 70.0], {interactive: false, opacity: 0}).addTo(map)
+        .bindTooltip('Arabian Sea', { permanent:true, direction:'center', className:'water-label' });
+
+        
+
+        // --- Final setup ---
+        document.getElementById('site-navbar').style.zIndex = 9999;
 
     </script>
+</body>
+</html>
 
