@@ -23,14 +23,13 @@ html, body {
     box-sizing: border-box;
     background: linear-gradient(180deg, rgba(36,59,47,0.95), rgba(36,59,47,0.9));
     color: #fff;
-    z-index: 9999;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: opacity 0.35s ease, transform 0.35s ease;
+    z-index: 10005;
+    opacity: 1;
+    transform: translateY(0);
+    transition: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    pointer-events: auto;
 }
-.navbar.visible { opacity: 1; transform: translateY(0); }
+/* .navbar.visible { opacity: 1; transform: translateY(0); } */
 
 /* left section */
 .navbar .left { display: flex; align-items: center; gap: 12px; }
@@ -43,9 +42,56 @@ html, body {
 
 #map { position: absolute; top: 64px; bottom: 0; left: 0; right: 0; }
 
+#inset {
+    width: 240px;
+    height: 180px;
+}
+
 /* Label styles */
 
-.imec-label {
+.country-label-no-bg,
+.port-label-no-bg,
+.water-label-no-bg {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    color: #0f2b19 !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.leaflet-tooltip.country-label-no-bg{
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    pointer-events: none;
+    padding: 0 !important;
+    color: #0f2b19 !important;
+    font-size: 13px !important;
+}
+
+.port-label-no-bg { font-weight: 700; font-size: 13px; color:#0b2b19; }
+
+.water-label-no-bg { font-weight: 700; font-size: 13px; color:#007b9a; }
+
+.waypoint-dot {
+    width: 8px;
+    height: 8px;
+    background: #ffffff;
+    border: 2px solid #007a3d;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.12);
+}
+
+.leaflet-marker-icon.icon-facing {  width: 32px !important; height: 20px !important; }
+
+.icon-facing { transform: none !important; }
+
+
+
+/* .imec-label {
     font-weight: 700;
     font-size: 14px;
     color: #1b362b;
@@ -93,12 +139,15 @@ html, body {
     padding: 3px 6px;
     border-radius: 4px;
     border: 1px solid rgba(0, 0, 0, 0.1);
-}
+} */
 
-.legend { font-size: 13px; color: #243b2f; }
+/* .legend { font-size: 13px; color: #243b2f; } */
 
 @media (max-width: 700px) {
-    .control-panel { left: 12px; top: 120px; width: 86%; }
-    .nav-links { display: none; }
+    /* .control-panel { left: 12px; top: 120px; width: 86%; } */
+    #inset { width: 180px; height: 140px; right: 8px; bottom: 8px; }
+    .country-label-no-bg { font-size: 11px !important;  }
+    .port-label-no-bg { font-size: 11px !important; }
+    .water-label-no-bg { font-size: 11px !important; }
 }
     
