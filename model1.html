@@ -24,7 +24,7 @@
 
         #page-title {
             position: fixed;
-            top: 10px;
+            top: 78px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 9980;
@@ -42,22 +42,29 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
             pointer-events: none;
         }
-        #logo-bottom img { height: 34px; display: block; }
-        #logo-bottom img { height: 34px; display: block; }
+        #logo-bottom img { 
+            height: 60px; 
+            display: block; 
+            width: auto;
+        }
 
         #inset {
             position: fixed;
             right: 14px;
             bottom: 14px;
             width: 240px;
-            height: 180px;
+            height: 320px;
             z-index: 5000;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
             background: #fff;
+            border: 3px solid rgba(0, 0, 0, 0.45);
         }
 
         .inset-title {
@@ -65,9 +72,8 @@
             z-index: 6000;
             left: 8px;
             top: 6px;
-            font-weight: 700;
-            font-size: 12px;
-            
+            font-weight: 800;
+            font-size: 14px;
         }
 
         #map {
@@ -91,7 +97,7 @@
             display: flex;
             align-items: center;
             padding: 0 18px;
-            background: rgba(36,59,47,0.95);
+            background: rgba(36,59,47,0.85);
             color: #fff;
             z-index: 10050;
             opacity: 0;
@@ -108,8 +114,7 @@
         .nav-links { list-style: none; margin: 0; padding: 0; display:flex; gap: 14px; align-items:center; }
         .nav-links li { display: inline-block; }
         .nav-links a { text-decoration:none; color:#e6f0e9; font-weight:600; padding:8px 10px; border-radius:6px; }
-        .nav-links a.active {background: rgba(255,255,255,0.06); border-bottom: 3px solid #c9a66b; }
-
+        
 
     </style>
 </head>
@@ -127,7 +132,7 @@
 
         <ul class="nav-links">
             <li><a href="index.html" class="navbar-logo">Home</a></li>
-            <li><a href="model1.html" class="navbar-link">Model 1</a></li>
+            <li><a href="model1.html" class="navbar-link active">Model 1</a></li>
             <li><a href="model2.html" class="navbar-link">Model 2</a></li>
             <li><a href="model3.html" class="navbar-link">Model 3</a></li>
         </ul>
@@ -135,13 +140,12 @@
 
     <!-- Bottom-left logo/name -->
     <div id="logo-bottom">
-        <img src="img/Grungras Logo 2024 isolated.jpg" alt="Grungras logo">
-        <div class="brand-small">Grungras Consultancy</div>
+        <img src="img/GC Logo Black BkGnd 2024 isolated.png" alt="Grungras logo">
     </div>
 
     <!-- inset map for Israel/Jordan -->
     <div id="inset">
-        <div class="inset-title">Jordan & Israel</div>
+        <div class="inset-title">Israel, Jordan, West Bank & Gaza</div>
         <div id="inset-map" style="width: 100%; height: 100%;"></div>
     </div>
 
@@ -174,7 +178,8 @@
             window.addEventListener('focusout', () => setVisibility(false));
             
             // --- map init ----
-            const map = L.map('map', { zoomControl: true}).setView([30, 45], 4);
+            const map = L.map('map', { zoomControl: false}).setView([30, 45], 4.25);
+            L.control.zoom({ position: 'topleft' }).addTo(map);
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap & CARTO',
@@ -219,17 +224,24 @@
                 [7.5,69.0],[6.5,64.0],[7.5,60.0],[9.5,58.0]
             ];
 
-            const seaOptions = { color: 'rgba(0,0,0,0)', fillColor: 'rgba(138,228,255,0.12)', fillOpacity: 0.12, weight: 0, interactive: false };
-            const medPoly = L.polygon(medCoords, seaOptions).addTo(map);
-            const gulfPoly = L.polygon(persionGulfCoords, seaOptions).addTo(map);
-            const arabianPoly = L.polygon(arabianSeaCoords, seaOptions).addTo(map);
+            const seaOptions = { color: 'rgba(0,0,0,0)', fillColor: '#88d7ff', fillOpacity: 0.50, weight: 0, interactive: false };
+
+            const countryLabelOffsets = {
+                'Greece': [0.7, -2.5],
+                'Saudi Arabia': [0, -5.0],
+                'Jordan': [-1.2, 0],
+                'India': [0, -5.0],
+                'United Arab Emirates': [-0.2, 1.0],
+            }
 
             // --- add world geojson and style countries ---
+
             fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
                 .then(r => r.json())
                 .then(geojson => {
                     L.geoJSON(geojson, {
                         pane: 'countriesPane',
+
                         style: feature => {
                             const name = feature.properties.name;
                             if (countryColors[name]) {
@@ -239,21 +251,148 @@
                         },
                         onEachFeature: (feature, layer) => {
                             const name = feature.properties.name;
-                            //const cls = countryColors[name] ? 'imec-label' : 'non-imec-label';
-                            if (countryColors[name]) {
-                                layer.bindTooltip(name, {permanent: false, direction: 'center', className: 'imec-label', pane: 'labelsPane', offset: [0, 0] });
-                            } 
-                        },
+                            
+                            if (!countryColors[name]) return;
 
+                            let center = layer.getBounds().getCenter();
+
+                            if (countryLabelOffsets[name]) {
+                                center = L.latLng(
+                                    center.lat + countryLabelOffsets[name][0],
+                                    center.lng + countryLabelOffsets[name][1]
+                                );
+                            }
+
+                            L.marker(center, { 
+                                opacity: 0, 
+                                pane: 'labelsPane' 
+                            })
+                            .bindTooltip(name, {
+                                permanent: true,
+                                direction: 'center',
+                                className: 'country-label-no-bg',
+                            })
+                            .addTo(map);
+
+                        
+                        },
                         interactive: false
                     }).addTo(map);
                 })
                 .catch(err => console.error('Error loading geojson:', err));
+
+            function updateCountryLabels() {
+                const zoom = map.getZoom();
+                const show = zoom >= 4;
+
+                document.querySelectorAll('.country-label-no-bg').forEach(el => {
+                    el.style.display = show ? 'block' : 'none';
+                });
+            }
+
+            map.on('zoomend', updateCountryLabels);
+            updateCountryLabels();
+
+            const territoriesGEOJSON = {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "properties": { "name": "West Bank" },
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [34.926412, 31.349967],
+                                [35.461996, 31.490598],
+                                [35.552633, 32.385611],
+                                [35.374105, 32.513087],
+                                [35.212057, 32.559397],
+                                [35.025289, 32.253309],
+                                [34.978597, 32.106856],
+                                [35.080221, 31.827248],
+                                [35.226153, 31.765687],
+                                [34.972529, 31.617153],
+                                [34.923534, 31.343689],
+                                [34.898371, 31.441570],
+                                [34.926412, 31.349967] 
+                            ]]
+                        }
+                    },
+                    {
+                        "type": "Feature",
+                        "properties": { "name": "Gaza Strip" },
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [34.220337, 31.324945],
+                                [34.267239, 31.226295],
+                                [34.372982, 31.307289],
+                                [34.371609, 31.372973],
+                                [34.565243, 31.539322],
+                                [34.491086, 31.591976],
+                                [34.220337, 31.324945]
+                            ]]
+                        }
+                    }
+                ]
+            };
+
+            const territoryFill = {
+                'West Bank': '#ffd54f',
+                'Gaza Strip': '#ec407a',
+            };
+
+            function addTerritories(targetMap) {
+                L.geoJSON(territoriesGEOJSON, {
+                    pane: 'countriesPane',
+
+                    style: feature => ({
+                        color: '#666', 
+                        weight: 1, 
+                        fillColor: territoryFill[feature.properties.name] || '#f0c090',
+                        fillOpacity: 0.9
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        const name = feature.properties.name;
+                        const center = layer.getBounds().getCenter();
+
+                        L.marker(center, { opacity: 0, pane: 'labelsPane' }).bindTooltip(name, {
+                            permanent: true,
+                            direction: 'center',
+                            className: 'territory-label'
+                        })
+                        .addTo(targetMap);
+                    },
+                    interactive: false
+                }).addTo(targetMap);
+            }
+
+            function addCountries(targetMap) {
+                fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
+                    .then(r => r.json())
+                    .then(geojson => {
+                        L.geoJSON(geojson, {
+                            pane: 'countriesPane',
+
+                            style: feature => {
+                                const name = feature.properties.name;
+                                if (countryColors[name]) {
+                                    return { color: '#666', weight: 1, fillColor: countryColors[name], fillOpacity: IMEC_HIGHLIGHT_FILL_OPACITY };
+                                }
+                                return { color: '#bbb', weight: 1, fillColor: NON_IMECCOUNTRY_COLOR, fillOpacity: IMEC_OTHER_FILL_OPACITY };
+                            },
+                            interactive: false
+                        }).addTo(targetMap);
+                    })
+                    .catch(err => console.error('Error loading geojson:', err));
+            }
             
             // ---------- IMEC route waypoints (approximate) ----------
             const routePoints = {
                 greece_piraeus: [37.94, 23.64],
                 israel_haifa: [32.82, 34.99],
+
+                north_westbank: [32.6, 35.3],
                 
                 sa_alHadithah: [31.48, 37.15],
                 sa_riyadh: [24.71, 46.68],
@@ -272,10 +411,18 @@
                 uae_alGhuwaifat: 'Al Ghuwaifat',
             }
 
+            const portLabelOffsets = {
+                greece_piraeus: [0.3, -0.8],
+                israel_haifa: [-0.3, -0.25],
+                uae_jabelAli: [0.8, -0.3],
+                india_mumbai: [0.7, 0],
+                uae_alGhuwaifat: [0.6, -0.2]
+            };
+
             const waypointIcon = L.divIcon({
                 className: 'waypoint-dot',
                 iconSize: [10, 10],
-                iconAnchor: [4, 4],
+                iconAnchor: [6, 6],
             });
 
             const waypointKeys = ['greece_piraeus', 'israel_haifa', 'uae_alGhuwaifat', 'uae_jabelAli', 'india_mumbai'];
@@ -286,11 +433,30 @@
                 L.marker(coord, { icon: waypointIcon, pane: 'iconsPane', interactive: false }).addTo(map);
 
                 if (ports[k]) {
-                    L.marker(coord, { opacity: 0, pane: 'labelsPane'}).bindTooltip(ports[k], {
-                        permanent: true,
-                        direction: 'top',
-                        className: 'port-label-no-bg',
+
+                    const offset = portLabelOffsets[k] || [0.4, 0.2];
+
+                    const labelLatLng = [
+                        coord[0] + offset[0],
+                        coord[1] + offset[1]
+                    ];
+                    // const labelPos = [ coord[0] + offset[0], coord[1] + offset[1] ];
+
+                    L.polyline([coord, labelLatLng], { 
+                        color: '#243b2f', 
+                        weight: 2, 
+                        dashArray: '4,3', 
+                        pane: 'labelsPane', 
+                        interactive: false 
                     }).addTo(map);
+
+                    L.marker(labelLatLng, { opacity: 0, pane: 'labelsPane'})
+                    .bindTooltip(ports[k], {
+                        permanent: true,
+                        direction: 'center',
+                        className: 'port-label-no-bg',
+                    })
+                    .addTo(map);
                 }
             });
 
@@ -324,6 +490,7 @@
 
             const landSegment = [
                 routePoints.israel_haifa,
+                routePoints.north_westbank,
                 routePoints.sa_alHadithah,
                 routePoints.sa_riyadh,
                 routePoints.sa_haradh,
@@ -336,10 +503,7 @@
             const landSmooth = densifyPath(landSegment, 40);
             const sea2Smooth = densifyPath(seaSegment2, 60);
 
-            // ---------- Draw IMEC route ----------
-            // map.createPane('imecRoutePane');
-            // map.getPane('imecRoutePane').style.zIndex = 650;
-            // map.getPane('imecRoutePane').style.pointerEvents = 'none';
+            // ---------- Draw IMEC route ---------
 
             const imecSea1 = L.polyline(sea1Smooth, {color: ROUTE_COLOR, weight: 4, pane: 'imecRoutePane', opacity: 0.95, lineJoin:'round' }).addTo(map);
             const imecLand = L.polyline(landSmooth, {color: ROUTE_COLOR, weight: 4, pane: 'imecRoutePane', opacity: 0.95, lineJoin:'round' }).addTo(map);
@@ -356,11 +520,45 @@
                 }
             ).addTo(map);
 
-            // ------ ICONS ------
-            map.createPane('iconsPane');
-            map.getPane('iconsPane').style.zIndex = 600;
+            
+            function midpoint(path){
+                if (!path || path.length < 2) {
+                    console.error('Invalid path passed to midpointOnPath:', path);
+                    return null;
+                }
 
-            const commonIconOpts = { iconSize: [32, 20], iconAnchor: [16, 10], className: 'icon-facing'}
+                let total = 0;
+                for (let i = 1; i < path.length; i++) {
+                    total += map.distance(path[i - 1], path[i]);
+                }
+
+                let half = total / 2;
+                let acc = 0;
+
+                for (let i = 1; i < path.length; i++) {
+                    const seg = map.distance(path[i - 1], path[i]);
+                    if (acc + seg >= half) {
+                        const t = (half - acc) / seg;
+                        return [
+                            path[i - 1][0] + (path[i][0] - path[i - 1][0]) * t,
+                            path[i - 1][1] + (path[i][1] - path[i - 1][1]) * t
+                        ];
+                    }
+                    acc += seg;
+                }
+
+                return path[Math.floor(path.length / 2)];
+            }
+          
+
+            const ship1Pos = midpoint(sea1Smooth);
+
+            const ship2Pos = midpoint(sea2Smooth);
+
+            const trainPos = midpoint(landSmooth);
+
+            // ------ ICONS ------
+            const commonIconOpts = { iconSize: [32, 32], iconAnchor: [16, 16], className: 'icon-facing'}
 
             const trainIcon = L.icon({
                 iconUrl: 'img/railway-icon.png',
@@ -376,20 +574,6 @@
                 className: commonIconOpts.className
             });
 
-            // let trains = [];
-            // let ships = [];
-
-            function midpoint(a,b){
-                return [(a[0]+b[0])/2, (a[1]+b[1])/2];
-            }
-
-            const ship1Pos = midpoint(routePoints.greece_piraeus, routePoints.israel_haifa);
-
-            const ship2Pos = midpoint(routePoints.uae_jabelAli, routePoints.india_mumbai);
-
-            const trainPos = midpoint(routePoints.israel_haifa, routePoints.sa_haradh);
-
-
             L.marker(ship1Pos, { icon: shipIcon, interactive: false, pane: 'iconsPane' }).addTo(map);
             L.marker(ship2Pos, { icon: shipIcon, interactive: false, pane: 'iconsPane' }).addTo(map);
             L.marker(trainPos, { icon: trainIcon, interactive: false, pane: 'iconsPane' }).addTo(map);
@@ -397,8 +581,7 @@
             // ------ Water labels ------
             const waterLabels = [
                 { pos: [33.0, 15.0], text: 'Eastern Mediterranean' },
-                /*{ pos: [26.0, 53.0], text: 'Persian Gulf' },*/
-                { pos: [16.0, 70.0], text: 'Arabian Sea' },
+                { pos: [16.0, 64.0], text: 'Arabian Sea' },
             ];
 
             waterLabels.forEach(w => {
@@ -407,10 +590,24 @@
                     .addTo(map);
             });
 
+
+            // ------- Inset map -------
             const insetMap = L.map("inset-map", {
                 zoomControl: false,
                 attributionControl: false
-            }).setView([31.4, 35.2], 7);
+            });
+
+            insetMap.createPane("countriesPane");
+            insetMap.createPane("labelsPane");
+            insetMap.createPane("iconsPane");
+
+            insetMap.getPane("countriesPane").style.zIndex = 200;
+            insetMap.getPane("labelsPane").style.zIndex = 500;
+            insetMap.getPane("iconsPane").style.zIndex = 400;
+
+            addCountries(insetMap);
+            addTerritories(insetMap);
+
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')
                 .addTo(insetMap);
@@ -422,11 +619,31 @@
             Object.keys(ports).forEach(key => {
                 const coord = routePoints[key];
                 if (!coord) return;
-                L.marker(coord, { interactive: false, opacity: 0 }).bindTooltip(ports[key], {
+
+                const offset = portLabelOffsets[key] || [0.6, 0];
+                const labelPos = [ coord[0] + offset[0], coord[1] + offset[1] ];
+
+                L.marker(coord, { icon: waypointIcon, interactive: false, pane: 'iconsPane' }).addTo(insetMap);
+
+                L.polyline([coord, labelPos], { 
+                    color: '#243b2f', 
+                    weight: 1.2, 
+                    dashArray: '3,3', 
+                    interactive: false 
+                }).addTo(insetMap);
+
+                L.marker(labelPos, { interactive: false, opacity: 0 }).bindTooltip(ports[key], {
                     permanent: true, direction: 'top', className: 'port-label-no-bg', offset: [0, -8]
                 }).addTo(insetMap);
             });
 
+            addTerritories(insetMap);
+
+            const insetBounds = [
+                [30.5, 33.0],
+                [34.3, 37.5]
+            ];
+            insetMap.fitBounds(insetBounds);
         });
     
     </script>
